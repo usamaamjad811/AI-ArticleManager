@@ -27,8 +27,10 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 openai.api_key = os.getenv("OPENAI_API_KEY")
 pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
-print(pc)
 
+cloud = os.environ.get('PINECONE_CLOUD') or 'aws'
+region = os.environ.get('PINECONE_REGION') or 'us-east-1'
+spec = ServerlessSpec(cloud=cloud, region=region)
 
 app = FastAPI()
 app.add_middleware(
@@ -39,21 +41,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 def read_root():
     return {"message": "AI-ArticleManger APIs are working...."}
 
+
 embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-text = TextLoader("").load()
+text = TextLoader("./Data.txt").load()
 splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
 docs = splitter.split_documents(text)
 print(docs[0])
 print(docs[1])
 total_docs = f"Total length of docs {len(docs[1:5])}"
-
-cloud = os.environ.get('PINECONE_CLOUD') or 'aws'
-region = os.environ.get('PINECONE_REGION') or 'us-east-1'
-spec = ServerlessSpec(cloud=cloud, region=region)
 
 index_name = "ai-article-manager"
 
@@ -84,7 +84,6 @@ docsearch = PineconeVectorStore.from_documents(
 
 time.sleep(5)
 
-
 # db = FAISS.from_documents(docs, embeddings)
 # db.save_local("Test")
 # new_db = FAISS.load_local(
@@ -107,7 +106,6 @@ time.sleep(5)
 
 retriever = docsearch.as_retriever(search_kwargs={"k": 5})
 
-
 template = """
 You are an AI Article Manager. You have been asked to provide the most relevant article based on the user's question and the given context.
 Remember: Your goal is to provide the most accurate and relevant answer based on the user's question and the given context. If you cannot find a suitable match, it's better to admit that than to provide incorrect information.
@@ -117,15 +115,16 @@ Context: {context}
 prompt = ChatPromptTemplate.from_template(template)
 llm = ChatOpenAI(model="gpt-4o", temperature=0)
 chain = (
-    RunnableParallel({"context": retriever,
-                     "question": RunnablePassthrough()})
-    | prompt
-    | llm
-    | StrOutputParser()
+        RunnableParallel({"context": retriever,
+                          "question": RunnablePassthrough()})
+        | prompt
+        | llm
+        | StrOutputParser()
 )
 Question = "What is the best way to manage articles?"
 response = chain.invoke(Question)
 print(response)
+
 
 @app.get("/articles/")
 async def read_articles():
@@ -134,6 +133,7 @@ async def read_articles():
         "message": "Articles retrieved successfully",
         "data": articles
     }
+
 
 @app.get("/articles/{id}")
 async def read_article(id: str):
@@ -145,6 +145,7 @@ async def read_article(id: str):
         "data": article
     }
 
+
 @app.post("/articles/")
 async def create_new_article(article: Article):
     new_article = await create_article(article)
@@ -152,6 +153,7 @@ async def create_new_article(article: Article):
         "message": "Article created successfully",
         "data": new_article
     }
+
 
 @app.put("/articles/{id}")
 async def update_existing_article(id: str, article: Article):
@@ -162,6 +164,7 @@ async def update_existing_article(id: str, article: Article):
         "message": "Article updated successfully",
         "data": updated_article
     }
+
 
 @app.delete("/articles/{id}")
 async def delete_existing_article(id: str):
