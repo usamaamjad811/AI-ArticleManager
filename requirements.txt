@@ -13,6 +13,9 @@ langchain-openai
 fastapi
 faiss-cpu
 langchain-community
+pymongo
+motor
+pydantic
 
 
 
