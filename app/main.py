@@ -214,10 +214,6 @@ async def read_articles():
     }
 
 
-# Initialize Pinecone client
-pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-
-
 @app.get("/list-indexes/")
 async def list_indexes():
     try:
@@ -258,61 +254,6 @@ async def list_indexes():
             "message": str(e),
             "available_indexes": list(pc.list_indexes().names())
         }
-
-
-# Define index and namespace configurations
-index_name = "ai-article-manager"
-namespace = "wondervector5000"
-
-# Initialize embeddings and LLM
-embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-llm = ChatOpenAI(model="gpt-4", temperature=0)
-
-# Retrieval template
-template = """
-You are an AI Article Manager. You have been asked to provide the most relevant article based on the user's question and the given context.
-Remember: Your goal is to provide the most accurate and relevant answer based on the user's question and the given context. If you cannot find a suitable match, it's better to admit that than to provide incorrect information.
-Question: {question}
-Context: {context}
-"""
-prompt = ChatPromptTemplate.from_template(template)
-
-
-@app.get("/get-relevant-article/")
-async def get_relevant_article(question: str):
-    print("Question:", question)
-
-    # Step 1: Check if Pinecone index exists
-    if index_name not in pc.list_indexes():
-        raise HTTPException(status_code=404, detail="Index not found in Pinecone")
-
-    # Access the Pinecone index
-    index = pc.Index(index_name)
-    print("Using Pinecone Index:", index_name)
-
-    # Step 2: Initialize Pinecone Vector Store as retriever
-    docsearch = PineconeVectorStore(index=index, embedding=embeddings, namespace=namespace)
-    retriever = docsearch.as_retriever(search_kwargs={"k": 5})
-
-    # Step 3: Set up the retrieval chain
-    chain = (
-            RunnableParallel({"context": retriever, "question": RunnablePassthrough()})
-            | prompt
-            | llm
-            | StrOutputParser()
-    )
-
-    # Step 4: Run the chain with the user's question
-    try:
-        response = chain.invoke(question)
-    except Exception as e:
-        print(f"Error during chain invocation: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error processing the request")
-
-    return {
-        "question": question,
-        "response": response
-    }
 
 
 @app.post("/articles/{id}/summarize")
