@@ -167,12 +167,8 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# CTK
-Tables_1000_rows/
-Tables_20000_rows
-Tables_20000_rows.zip
-faiss_index/
-data/
+articles.txt
+app/Data.txt
 my-app/
 
 
