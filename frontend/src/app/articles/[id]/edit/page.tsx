@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import ArticleForm from '../../../components/ArticleForm';
+import HomeButton from "../../../components/HomeButton";
 
 interface Article {
   title: string;
@@ -58,6 +59,7 @@ export default function EditArticlePage({ params }: EditArticlePageProps) {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Edit Article</h1>
+        <HomeButton /> {/* Add Home button here */}
       <ArticleForm article={article} articleId={params.id} isEditing />
     </div>
   );
