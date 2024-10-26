@@ -12,7 +12,7 @@ services:
     depends_on:
       - mongodb
     environment:
-      - MONGO_URI=mongodb://mongodb:27017/article-management-db  # MongoDB connection string
+      - MONGO_URI=mongodb+srv://dev:DJgMpxz8oXvLN0ma@article-management.pcflq.mongodb.net/?retryWrites=true&w=majority&appName=article-management
     networks:
       - app_network
 
