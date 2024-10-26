@@ -3,19 +3,18 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
+import HomeButton from '../components/HomeButton';
 
 const ArticleList = () => {
   const [articles, setArticles] = useState([]);
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Fetch articles directly in this component
   useEffect(() => {
     const fetchArticles = async () => {
       try {
         const response = await axios.get('http://127.0.0.1:8000/articles/');
         setArticles(response.data.data); // Adjust based on your API response
-        console.log("Fetched articles:", response.data.data); // Debugging
       } catch (error) {
         console.error('Error fetching articles:', error);
       } finally {
@@ -38,11 +37,29 @@ const ArticleList = () => {
 
   return (
     <div className="container mx-auto p-4">
+       <HomeButton /> {/* Add Home button here */}
       <h1 className="text-2xl font-bold mb-4">Articles</h1>
       {success && <p className="text-green-500 mb-4">{success}</p>}
 
       {loading ? (
-        <p>Loading articles...</p>
+        <div className="flex justify-center items-center h-64">
+          <div
+            style={{
+              border: "4px solid #f3f3f3",
+              borderTop: "4px solid #3498db",
+              borderRadius: "50%",
+              width: "40px",
+              height: "40px",
+              animation: "spin 1s linear infinite",
+            }}
+          ></div>
+          <style jsx>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
       ) : articles.length === 0 ? (
         <p className="text-gray-500">No articles to display.</p>
       ) : (
@@ -55,13 +72,13 @@ const ArticleList = () => {
                   <p>{article.content.slice(0, 100)}...</p>
                 </div>
               </Link>
-              <button
-                onClick={() => handleDelete(article._id)}
-                className="text-red-500 mt-2"
-              >
-                Delete
-              </button>
-              <div>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => handleDelete(article._id)}
+                  className="text-red-500"
+                >
+                  Delete
+                </button>
                 <Link href={`/articles/${article._id}/edit`}>
                   <button className="text-blue-500">Edit</button>
                 </Link>
