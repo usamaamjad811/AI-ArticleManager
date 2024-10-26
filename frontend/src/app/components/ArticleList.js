@@ -1,16 +1,72 @@
-import Link from 'next/link';
+"use client"; // Ensure this is a Client Component
 
-const ArticleList = ({ articles }) => (
-  <div className="grid gap-4">
-    {articles.map(article => (
-      <Link key={article._id} href={`/articles/${article._id}`}>
-        <div className="p-4 border rounded shadow cursor-pointer hover:bg-gray-100">
-          <h2 className="font-bold">{article.title}</h2>
-          <p>{article.content.slice(0, 1000)}...</p>
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import axios from 'axios';
+
+const ArticleList = () => {
+  const [articles, setArticles] = useState([]);
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // Fetch articles directly in this component
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        const response = await axios.get('http://127.0.0.1:8000/articles/');
+        setArticles(response.data.data); // Adjust based on your API response
+        console.log("Fetched articles:", response.data.data); // Debugging
+      } catch (error) {
+        console.error('Error fetching articles:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchArticles();
+  }, []);
+
+  const handleDelete = async (articleId) => {
+    try {
+      await axios.delete(`http://127.0.0.1:8000/articles/${articleId}`);
+      setArticles(articles.filter(article => article._id !== articleId));
+      setSuccess('Article deleted successfully!');
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (error) {
+      console.error('Error deleting article:', error);
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Articles</h1>
+      {success && <p className="text-green-500 mb-4">{success}</p>}
+
+      {loading ? (
+        <p>Loading articles...</p>
+      ) : articles.length === 0 ? (
+        <p className="text-gray-500">No articles to display.</p>
+      ) : (
+        <div className="grid gap-4">
+          {articles.map(article => (
+            <div key={article._id} className="p-4 border rounded shadow hover:bg-gray-100">
+              <Link href={`/articles/${article._id}`}>
+                <div className="cursor-pointer">
+                  <h2 className="font-bold">{article.title}</h2>
+                  <p>{article.content.slice(0, 100)}...</p>
+                </div>
+              </Link>
+              <button
+                onClick={() => handleDelete(article._id)}
+                className="text-red-500 mt-2"
+              >
+                Delete
+              </button>
+            </div>
+          ))}
         </div>
-      </Link>
-    ))}
-  </div>
-);
+      )}
+    </div>
+  );
+};
 
 export default ArticleList;
