@@ -1,0 +1,34 @@
+# AI ArticleManager/docker-compose.yml
+
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: .  # Refers to the Dockerfile in the root directory
+    container_name: fastapi_app
+    ports:
+      - "8000:8000"  # Expose FastAPI's port on localhost
+    depends_on:
+      - mongodb
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/article-management-db  # MongoDB connection string
+    networks:
+      - app_network
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    networks:
+      - app_network
+    volumes:
+      - mongo_data:/data/db
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  mongo_data:
