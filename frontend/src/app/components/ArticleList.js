@@ -61,6 +61,11 @@ const ArticleList = () => {
               >
                 Delete
               </button>
+              <div>
+                <Link href={`/articles/${article._id}/edit`}>
+                  <button className="text-blue-500">Edit</button>
+                </Link>
+              </div>
             </div>
           ))}
         </div>
