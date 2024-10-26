@@ -1,18 +1,15 @@
-// src/app/components/ArticleForm.js
-
-"use client"; // Mark as a client component to enable client-side hooks
+"use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // Import from `next/navigation` for App Router
+import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
-// Define the shape of the `article` object
+
 interface Article {
   title: string;
   content: string;
 }
 
-// Define props for ArticleForm component
 interface ArticleFormProps {
   article?: Article;
   articleId?: string;
@@ -34,7 +31,7 @@ export default function ArticleForm({ article, articleId, isEditing = false }: A
       } else {
         await axios.post('http://127.0.0.1:8000/articles/', payload);
       }
-      router.push('/articles'); // Redirect to articles list
+      router.push('/articles');
     } catch (error) {
       console.error('Error saving article:', error);
     }

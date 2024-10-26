@@ -1,5 +1,3 @@
-// src/app/components/ArticleList.js
-
 import Link from 'next/link';
 
 const ArticleList = ({ articles }) => (

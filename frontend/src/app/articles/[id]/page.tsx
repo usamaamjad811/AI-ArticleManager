@@ -1,7 +1,4 @@
-"use client";  // Mark as a Client Component
-
-import { useRouter } from 'next/router';
-import ArticleForm from '../../components/ArticleForm';
+"use client";
 import axios from 'axios';
 
 
