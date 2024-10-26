@@ -171,9 +171,50 @@ async def read_articles():
         for article in articles:
             await file.write(f"{article}\n\n")  # Writes each article with a newline for separation
 
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+    text = TextLoader(file_path).load()
+    print("Text",text)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
+    docs = splitter.split_documents(text)
+    print(docs[0])
+    print(docs[1])
+    total_docs = f"Total length of docs {len(docs[1:5])}"
+    print(total_docs)
+
+    index_name = "ai-article-manager"
+
+    if index_name not in pc.list_indexes().names():
+        pc.create_index(
+            name=index_name,
+            dimension=embeddings.dimension,
+            metric="cosine",
+            spec=spec
+        )
+        # Wait for index to be ready
+        while not pc.describe_index(index_name).status['ready']:
+            time.sleep(1)
+
+    # See that it is empty
+    print("Index before upsert:")
+    print(pc.Index(index_name).describe_index_stats())
+    print("\n")
+
+    namespace = "wondervector5000"
+
+    docsearch = PineconeVectorStore.from_documents(
+        documents=docs,
+        index_name=index_name,
+        embedding=embeddings,
+        namespace=namespace
+    )
+
+    time.sleep(5)
+
+
+    retriever = docsearch.as_retriever(search_kwargs={"k": 5})
+
     return {
-        "message": "Articles retrieved and saved to file successfully",
-        "file_path": file_path
+        "message": "Articles embedded and stored in Pinecone successfully",
     }
 @app.post("/articles/{id}/summarize")
 async def summarize_article(id: str):
