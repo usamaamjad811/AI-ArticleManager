@@ -32,8 +32,9 @@ project-root/
 │   ├── src/
 │   │   ├── app/        # Application components
 │   │   └── pages/      # Next.js pages
+│   ├── Dockerfile      # Frontend Dockerfile
 │   └── package.json    # Frontend dependencies
-├── Dockerfile          # Backend Dockerfile
+├── Dockerfile  # Docker # Backend Dockerfile
 ├── docker-compose.yml  # Docker Compose config
 └── README.md          # Documentation
 ```
