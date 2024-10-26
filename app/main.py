@@ -20,6 +20,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone, ServerlessSpec
 import time
+import aiofiles
 from langchain.schema.runnable import RunnablePassthrough, RunnableParallel
 from dotenv import load_dotenv, find_dotenv
 
@@ -46,8 +47,8 @@ def read_root():
     return {"message": "AI-ArticleManger APIs are working...."}
 
 
-embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-# text = TextLoader("/home/usama.amjad@vaival.tech/Documents/Extra Work/AI-ArticleManager/app/Data.txt").load()
+# embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+# text = TextLoader("/home/usama.amjad@vaival.tech/Documents/Extra Work/AI-ArticleManager/articles.txt").load()
 # splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
 # docs = splitter.split_documents(text)
 # print(docs[0])
@@ -82,27 +83,8 @@ embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
 # )
 #
 # time.sleep(5)
-
-# db = FAISS.from_documents(docs, embeddings)
-# db.save_local("Test")
-# new_db = FAISS.load_local(
-#     "Test", embeddings, allow_dangerous_deserialization=True
-# )
-
-# Define the path to the FAISS index
-# index_path = "faiss_index"
 #
-# # Check if the FAISS index already exists
-# if os.path.exists(index_path):
-#     print("Loading FAISS index...")
-#     new_db = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
-# else:
-#     print("Creating FAISS index...")
-#     db = FAISS.from_documents(docs, embeddings)
-#     db.save_local(index_path)
-#     new_db = db
 #
-
 # retriever = docsearch.as_retriever(search_kwargs={"k": 5})
 #
 # template = """
@@ -120,7 +102,7 @@ embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
 #         | llm
 #         | StrOutputParser()
 # )
-# Question = "What is the best way to manage articles?"
+# Question = "What is Dockerization?"
 # response = chain.invoke(Question)
 # print(response)
 
@@ -176,6 +158,23 @@ async def delete_existing_article(id: str):
     }
 
 
+@app.get("/embed-articles/")
+async def read_articles():
+    articles = await get_all_articles()
+    print("Articles",articles)
+
+    # Define the file path for the text file
+    file_path = "articles.txt"
+
+    # Write articles to a text file asynchronously
+    async with aiofiles.open(file_path, "w") as file:
+        for article in articles:
+            await file.write(f"{article}\n\n")  # Writes each article with a newline for separation
+
+    return {
+        "message": "Articles retrieved and saved to file successfully",
+        "file_path": file_path
+    }
 @app.post("/articles/{id}/summarize")
 async def summarize_article(id: str):
     try:
