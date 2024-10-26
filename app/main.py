@@ -9,7 +9,6 @@ from app.crud import (
 from fastapi.middleware.cors import CORSMiddleware
 import openai
 import os
-from dotenv import load_dotenv, find_dotenv
 from langchain_openai import OpenAIEmbeddings
 from langchain.prompts import ChatPromptTemplate
 from langchain_openai.chat_models import ChatOpenAI
@@ -48,41 +47,41 @@ def read_root():
 
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-text = TextLoader("./Data.txt").load()
-splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
-docs = splitter.split_documents(text)
-print(docs[0])
-print(docs[1])
-total_docs = f"Total length of docs {len(docs[1:5])}"
-
-index_name = "ai-article-manager"
-
-if index_name not in pc.list_indexes().names():
-    pc.create_index(
-        name=index_name,
-        dimension=embeddings.dimension,
-        metric="cosine",
-        spec=spec
-    )
-    # Wait for index to be ready
-    while not pc.describe_index(index_name).status['ready']:
-        time.sleep(1)
-
-# See that it is empty
-print("Index before upsert:")
-print(pc.Index(index_name).describe_index_stats())
-print("\n")
-
-namespace = "wondervector5000"
-
-docsearch = PineconeVectorStore.from_documents(
-    documents=docs,
-    index_name=index_name,
-    embedding=embeddings,
-    namespace=namespace
-)
-
-time.sleep(5)
+# text = TextLoader("/home/usama.amjad@vaival.tech/Documents/Extra Work/AI-ArticleManager/app/Data.txt").load()
+# splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
+# docs = splitter.split_documents(text)
+# print(docs[0])
+# print(docs[1])
+# total_docs = f"Total length of docs {len(docs[1:5])}"
+#
+# index_name = "ai-article-manager"
+#
+# if index_name not in pc.list_indexes().names():
+#     pc.create_index(
+#         name=index_name,
+#         dimension=embeddings.dimension,
+#         metric="cosine",
+#         spec=spec
+#     )
+#     # Wait for index to be ready
+#     while not pc.describe_index(index_name).status['ready']:
+#         time.sleep(1)
+#
+# # See that it is empty
+# print("Index before upsert:")
+# print(pc.Index(index_name).describe_index_stats())
+# print("\n")
+#
+# namespace = "wondervector5000"
+#
+# docsearch = PineconeVectorStore.from_documents(
+#     documents=docs,
+#     index_name=index_name,
+#     embedding=embeddings,
+#     namespace=namespace
+# )
+#
+# time.sleep(5)
 
 # db = FAISS.from_documents(docs, embeddings)
 # db.save_local("Test")
@@ -104,26 +103,26 @@ time.sleep(5)
 #     new_db = db
 #
 
-retriever = docsearch.as_retriever(search_kwargs={"k": 5})
-
-template = """
-You are an AI Article Manager. You have been asked to provide the most relevant article based on the user's question and the given context.
-Remember: Your goal is to provide the most accurate and relevant answer based on the user's question and the given context. If you cannot find a suitable match, it's better to admit that than to provide incorrect information.
-Question: {question}
-Context: {context}
-"""
-prompt = ChatPromptTemplate.from_template(template)
-llm = ChatOpenAI(model="gpt-4o", temperature=0)
-chain = (
-        RunnableParallel({"context": retriever,
-                          "question": RunnablePassthrough()})
-        | prompt
-        | llm
-        | StrOutputParser()
-)
-Question = "What is the best way to manage articles?"
-response = chain.invoke(Question)
-print(response)
+# retriever = docsearch.as_retriever(search_kwargs={"k": 5})
+#
+# template = """
+# You are an AI Article Manager. You have been asked to provide the most relevant article based on the user's question and the given context.
+# Remember: Your goal is to provide the most accurate and relevant answer based on the user's question and the given context. If you cannot find a suitable match, it's better to admit that than to provide incorrect information.
+# Question: {question}
+# Context: {context}
+# """
+# prompt = ChatPromptTemplate.from_template(template)
+# llm = ChatOpenAI(model="gpt-4o", temperature=0)
+# chain = (
+#         RunnableParallel({"context": retriever,
+#                           "question": RunnablePassthrough()})
+#         | prompt
+#         | llm
+#         | StrOutputParser()
+# )
+# Question = "What is the best way to manage articles?"
+# response = chain.invoke(Question)
+# print(response)
 
 
 @app.get("/articles/")
@@ -175,3 +174,54 @@ async def delete_existing_article(id: str):
         "message": "Article deleted successfully",
         "data": deleted_status
     }
+
+
+@app.post("/articles/{id}/summarize")
+async def summarize_article(id: str):
+    try:
+        # Get the article content
+        article = await get_article_by_id(id)
+        # print("Article",article)
+        if article is None:
+            raise HTTPException(status_code=404, detail="Article not found")
+
+        # Initialize ChatOpenAI
+        llm = ChatOpenAI(model="gpt-4o-2024-08-06", temperature=0)
+
+        # Create the summarization prompt
+        template = """
+        Always start your reply with a greeting and end with a closing.
+        Please provide a detail summary of the following article. 
+        The summary should capture the main points and key insights.
+        Write your answer in the bullet points.
+        Give the details in 4-5 paragraphs.
+        Article Content:
+        {content}
+
+        Please provide the summary in 2-3 paragraphs.
+        """
+
+        prompt = ChatPromptTemplate.from_template(template)
+
+        # Create the chain
+        chain = (
+                prompt
+                | llm
+                | StrOutputParser()
+        )
+
+        # Generate summary
+        summary = chain.invoke({"content": article["content"]})
+        print("Summary",summary)
+
+        return {
+            "message": "Summary generated successfully",
+            "data": {
+                "article_id": id,
+                "title": article["title"],
+                "summary": summary
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
