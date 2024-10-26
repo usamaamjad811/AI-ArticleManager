@@ -1,7 +1,5 @@
 # AI ArticleManager/docker-compose.yml
 
-version: "3.8"
-
 services:
   api:
     build:
@@ -9,26 +7,24 @@ services:
     container_name: fastapi_app
     ports:
       - "8000:8000"  # Expose FastAPI's port on localhost
-    depends_on:
-      - mongodb
     environment:
       - MONGO_URI=mongodb+srv://dev:DJgMpxz8oXvLN0ma@article-management.pcflq.mongodb.net/?retryWrites=true&w=majority&appName=article-management
     networks:
       - app_network
 
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
+  frontend:
+    build:
+      context: ./frontend  # Path to Next.js Dockerfile
+    container_name: nextjs_frontend
     ports:
-      - "27017:27017"
+      - "3000:3000"  # Expose Next.js on localhost
+    depends_on:
+      - api  # Ensure backend starts before frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8000  # Connect to FastAPI via internal Docker network
     networks:
       - app_network
-    volumes:
-      - mongo_data:/data/db
 
 networks:
   app_network:
     driver: bridge
-
-volumes:
-  mongo_data:
