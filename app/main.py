@@ -44,7 +44,7 @@ def read_root():
     return {"message": "AI-ArticleManger APIs are working...."}
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-text = TextLoader("/home/usama.amjad@vaival.tech/Documents/Extra Work/AI-ArticleManager/app/Data.txt").load()
+text = TextLoader("").load()
 splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
 docs = splitter.split_documents(text)
 print(docs[0])
