@@ -1,31 +1,25 @@
-# app/main.py
-from fastapi import FastAPI, HTTPException
-from langchain_community.chains.pebblo_retrieval.enforcement_filters import PINECONE
-from torch.jit.frontend import pretty_node_names
-
 from app.schemas import Article
 from app.crud import (
     get_all_articles, get_article_by_id, create_article, update_article, delete_article
 )
 from fastapi.middleware.cors import CORSMiddleware
-import openai
-import os
 from langchain_openai import OpenAIEmbeddings
 from langchain.prompts import ChatPromptTemplate
 from langchain_openai.chat_models import ChatOpenAI
 from langchain.schema.output_parser import StrOutputParser
-from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi import FastAPI, HTTPException, status, Depends,Request
 from langchain_community.document_loaders import TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone, ServerlessSpec
 import time
 import aiofiles
+import openai
+import os
+import json
 from langchain.schema.runnable import RunnablePassthrough, RunnableParallel
 from dotenv import load_dotenv, find_dotenv
-import json
-
+from pydantic import BaseModel
 load_dotenv(find_dotenv())
 openai.api_key = os.getenv("OPENAI_API_KEY")
 pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
@@ -257,16 +251,24 @@ async def list_indexes():
             "available_indexes": list(pc.list_indexes().names())
         }
 
-# New endpoint to perform similarity search across all indexes
-@app.get("/query-similarity/")
-async def query_similarity():
+
+# Define a Pydantic model for the request body
+class QueryRequest(BaseModel):
+    question: str
+
+
+@app.post("/query-similarity/")
+async def query_similarity(query_request: QueryRequest):
     try:
-        print("Query Vector")
+        # Extract the question from the request body
+        question = query_request.question
+        print("Processing question:", question)
+
         embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
         index_name = 'ai-article-manager'
         namespace = "wondervector5000"
 
-        # check if index already exists (it shouldn't if this is first time)
+        # Check if index already exists, create if not
         if index_name not in pc.list_indexes().names():
             pc.create_index(
                 name=index_name,
@@ -275,16 +277,14 @@ async def query_similarity():
                 spec=spec
             )
 
-            # wait for index to be initialized
+            # Wait for index to be initialized
             while not pc.describe_index(index_name).status['ready']:
                 time.sleep(1)
 
-        # connect to index
+        # Connect to the existing index
         index = pc.Index(index_name)
         time.sleep(1)
 
-        # view and retrieve index stats
-        index_stats = index.describe_index_stats()
         # Load the existing embeddings directly from Pinecone
         docsearch = PineconeVectorStore(
             index_name=index_name,
@@ -301,6 +301,8 @@ async def query_similarity():
         """
         prompt = ChatPromptTemplate.from_template(template)
         llm = ChatOpenAI(model="gpt-4o", temperature=0)
+
+        # Define the chain with context and question retrieval
         chain = (
                 RunnableParallel({"context": retriever,
                                   "question": RunnablePassthrough()})
@@ -308,28 +310,27 @@ async def query_similarity():
                 | llm
                 | StrOutputParser()
         )
-        Question = "What is the best way to manage articles?"
-        response = chain.invoke(Question)
-        print(response)
 
-        time.sleep(5)
+        # Pass the user's question to the chain
+        response = chain.invoke(question)
+        print("Response:", response)
 
         # Convert index_stats to a JSON-compatible format if necessary
+        index_stats = index.describe_index_stats()
         index_stats_json = json.loads(json.dumps(index_stats, default=str))
 
-        # returning index stats as JSON response
+        # Return the response as JSON along with index stats
         return {
             "status": "success",
-            "index_name": index_name,
+            "question": question,
+            "response": response,
             "index_details": index_stats_json
         }
 
     except Exception as e:
         print(f"Detailed error: {str(e)}")
-        return {
-            "status": "error",
-            "message": str(e)
-        }
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/articles/{id}/summarize")
 async def summarize_article(id: str):
     try:
