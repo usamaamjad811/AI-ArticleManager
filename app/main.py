@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from app.schemas import Article
 from langchain_openai import OpenAIEmbeddings
 from pinecone import Pinecone, ServerlessSpec
+from fastapi.responses import StreamingResponse
 from langchain.prompts import ChatPromptTemplate
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_pinecone import PineconeVectorStore
@@ -252,21 +253,19 @@ async def query_similarity(query_request: QueryRequest):
                 | StrOutputParser()
         )
 
-        # Pass the user's question to the chain
-        response = chain.invoke(question)
-        print("Response:", response)
+        def response_stream():
+            try:
+                # Here we simulate streaming the response in chunks
+                response = chain.invoke(question)
+                for i in range(0, len(response), 50):  # Break response into chunks of 50 chars
+                    yield response[i:i + 50]
+                    time.sleep(0.1)  # Simulate a delay between chunks
+                yield "\n-- End of response --\n"
+            except Exception as e:
+                yield f"\nError: {str(e)}\n"
 
-        # Convert index_stats to a JSON-compatible format if necessary
-        index_stats = index.describe_index_stats()
-        index_stats_json = json.loads(json.dumps(index_stats, default=str))
+        return StreamingResponse(response_stream(), media_type="text/plain")
 
-        # Return the response as JSON along with index stats
-        return {
-            "status": "success",
-            "question": question,
-            "response": response,
-            "index_details": index_stats_json
-        }
 
     except Exception as e:
         print(f"Detailed error: {str(e)}")

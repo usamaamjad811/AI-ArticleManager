@@ -6,14 +6,19 @@ export default function Page() {
         AI Article Manager is your go-to solution for managing and editing articles with the power of AI.
         Create, edit, and organize your content effortlessly!
       </p>
-      <div className="flex justify-center space-x-4">
-        <a href="/articles" className="bg-blue-500 text-white px-6 py-3 rounded-md shadow-md hover:bg-blue-600">
-          View Articles
-        </a>
-        <a href="/articles/new" className="bg-green-500 text-white px-6 py-3 rounded-md shadow-md hover:bg-green-600">
-          Create New Article
-        </a>
-      </div>
+        <div className="flex justify-center space-x-4">
+            <a href="/articles" className="bg-blue-500 text-white px-6 py-3 rounded-md shadow-md hover:bg-blue-600">
+                View Articles
+            </a>
+            <a href="/articles/new"
+               className="bg-green-500 text-white px-6 py-3 rounded-md shadow-md hover:bg-green-600">
+                Create New Article
+            </a>
+            <a href="/articles/search"
+               className="bg-green-500 text-white px-6 py-3 rounded-md shadow-md hover:bg-green-600">
+                Generate Summary
+            </a>
+        </div>
     </div>
   );
 }

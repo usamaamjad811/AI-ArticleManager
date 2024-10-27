@@ -1,17 +1,10 @@
 "use client";
 import { useState } from 'react';
-import axios, { AxiosError } from 'axios';
-
-interface ApiResponse {
-  status: string;
-  question: string;
-  response: string;
-  index_details: Record<string, unknown>;
-}
+import HomeButton from "../../components/HomeButton";
 
 export default function Search() {
   const [question, setQuestion] = useState<string>('');
-  const [response, setResponse] = useState<ApiResponse | null>(null);
+  const [response, setResponse] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,19 +12,34 @@ export default function Search() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setResponse(''); // Clear previous response
 
     try {
-      const res = await axios.post<ApiResponse>('http://localhost:8000/ai-article-search/', {
-        question,
+      const res = await fetch('http://localhost:8000/ai-article-search/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question }),
       });
-      setResponse(res.data);
+
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      // Function to read each chunk
+      const readStream = async () => {
+        let done = false;
+        while (!done) {
+          const { value, done: streamDone } = await reader.read();
+          done = streamDone;
+          setResponse((prev) => prev + decoder.decode(value, { stream: true }));
+        }
+      };
+
+      await readStream();
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data.message || 'Failed to retrieve response. Please try again.');
-      } else {
-        setError('An unexpected error occurred.');
-      }
       console.error(err);
+      setError('Failed to retrieve response. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -43,21 +51,22 @@ export default function Search() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        height: '100vh', // Full viewport height
-        backgroundColor: '#e0e5ec', // Subtle background color for the whole page
+        height: '100vh',
+        backgroundColor: '#e0e5ec',
       }}
     >
       <div
         style={{
           padding: '20px',
           maxWidth: '600px',
-          width: '100%', // Responsive width
-          backgroundColor: '#f5f7fa', // Light background color for the form
+          width: '100%',
+          backgroundColor: '#f5f7fa',
           borderRadius: '10px',
           boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
         }}
       >
         <h1 style={{ color: '#333', textAlign: 'center' }}>AI Article Search</h1>
+          <HomeButton />
         <form onSubmit={handleSearch}>
           <label style={{ fontWeight: 'bold', color: '#555' }}>
             Enter your question:
@@ -82,7 +91,7 @@ export default function Search() {
             style={{
               padding: '10px',
               width: '100%',
-              backgroundColor: '#007BFF', // Blue button
+              backgroundColor: '#007BFF',
               color: 'white',
               border: 'none',
               borderRadius: '5px',
@@ -103,22 +112,14 @@ export default function Search() {
             style={{
               marginTop: '20px',
               padding: '15px',
-              backgroundColor: '#e9f7ef', // Light green background for response
+              backgroundColor: '#e9f7ef',
               border: '1px solid #c3e6cb',
               borderRadius: '5px',
+              whiteSpace: 'pre-wrap', // Preserves line breaks
             }}
           >
             <h2 style={{ color: '#155724' }}>Response</h2>
-            <p>
-              <strong>Question:</strong> {response.question}
-            </p>
-            <p>
-              <strong>Answer:</strong> {response.response}
-            </p>
-            <details>
-              <summary style={{ color: '#155724' }}>Index Details</summary>
-              <pre>{JSON.stringify(response.index_details, null, 2)}</pre>
-            </details>
+            <p>{response}</p>
           </div>
         )}
       </div>
