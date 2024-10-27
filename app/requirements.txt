@@ -17,6 +17,7 @@ pymongo
 motor
 pydantic
 pinecone
+langchain_pinecone
 aiofiles
 python-multipart
 
