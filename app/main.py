@@ -198,7 +198,7 @@ class QueryRequest(BaseModel):
     question: str
 
 
-@app.post("/query-similarity/")
+@app.post("/ai-article-search/")
 async def query_similarity(query_request: QueryRequest):
     try:
         # Extract the question from the request body
