@@ -107,7 +107,9 @@ sudo docker-compose stop
 | DELETE | `/articles/{id}` | Delete article |
 | POST | `/articles/{id}/summarize` | Generate AI summary |
 | POST | `/articles/{id}/embed` | Generate embeddings |
-| GET | `/articles/search` | Search similar articles |
+| GET | `/list-indexes` | List all available indexes |
+| POST | `/ai-article-search` | Search similar articles OR Generate summary |
+
 
 ## 💻 Tech Stack
 
