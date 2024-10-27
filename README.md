@@ -93,6 +93,7 @@ docker-compose up --build
 
 # Stop services
 docker-compose down
+sudo docker-compose stop
 ```
 
 ## 🔌 API Endpoints
