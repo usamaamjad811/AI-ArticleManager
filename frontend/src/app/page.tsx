@@ -18,6 +18,10 @@ export default function Page() {
                className="bg-green-500 text-white px-6 py-3 rounded-md shadow-md hover:bg-green-600">
                 Generate Summary
             </a>
+            <a href="/articles/embed"
+               className="bg-red-500 text-white px-6 py-3 rounded-md shadow-md hover:bg-red-500">
+                Generate Embeddings
+            </a>
         </div>
     </div>
   );

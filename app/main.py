@@ -98,58 +98,52 @@ async def delete_existing_article(id: str):
 
 @app.get("/embed-articles/")
 async def read_articles():
-    articles = await get_all_articles()
-    print("Articles", articles)
+    try:
+        # Your original logic for embedding articles
+        articles = await get_all_articles()
 
-    # Define the file path for the text file
-    file_path = "articles.txt"
+        # Define the file path for the text file
+        file_path = "articles.txt"
 
-    # Write articles to a text file asynchronously
-    async with aiofiles.open(file_path, "w") as file:
-        for article in articles:
-            await file.write(f"{article}\n\n")  # Writes each article with a newline for separation
+        # Write articles to a text file asynchronously
+        async with aiofiles.open(file_path, "w") as file:
+            for article in articles:
+                await file.write(f"{article}\n\n")
 
-    embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-    text = TextLoader(file_path).load()
-    print("Text", text)
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
-    docs = splitter.split_documents(text)
-    print(docs[0])
-    print(docs[1])
-    total_docs = f"Total length of docs {len(docs[1:5])}"
-    print(total_docs)
+        # Load and process articles for embedding
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+        text = TextLoader(file_path).load()
+        splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
+        docs = splitter.split_documents(text)
 
-    index_name = "ai-article-manager"
+        # Create and check index
+        index_name = "ai-article-manager"
+        if index_name not in pc.list_indexes().names():
+            pc.create_index(
+                name=index_name,
+                dimension=embeddings.dimension,
+                metric="cosine",
+                spec=spec
+            )
 
-    if index_name not in pc.list_indexes().names():
-        pc.create_index(
-            name=index_name,
-            dimension=embeddings.dimension,
-            metric="cosine",
-            spec=spec
-        )
         # Wait for index to be ready
         while not pc.describe_index(index_name).status['ready']:
             time.sleep(1)
 
-    # See that it is empty
-    print("Index before upsert:")
-    print(pc.Index(index_name).describe_index_stats())
-    print("\n")
+        # Embed and store documents
+        namespace = "wondervector5000"
+        docsearch = PineconeVectorStore.from_documents(
+            documents=docs,
+            index_name=index_name,
+            embedding=embeddings,
+            namespace=namespace
+        )
 
-    namespace = "wondervector5000"
+        return {"message": "Articles embedded and stored in Pinecone successfully"}
 
-    docsearch = PineconeVectorStore.from_documents(
-        documents=docs,
-        index_name=index_name,
-        embedding=embeddings,
-        namespace=namespace
-    )
-
-    time.sleep(5)
-    return {
-        "message": "Articles embedded and stored in Pinecone successfully",
-    }
+    except Exception as e:
+        print(f"Error: {str(e)}")  # Log error details
+        raise HTTPException(status_code=500, detail="Error embedding articles.")
 
 
 @app.get("/list-indexes/")
