@@ -1,6 +1,7 @@
 # app/main.py
 from fastapi import FastAPI, HTTPException
 from langchain_community.chains.pebblo_retrieval.enforcement_filters import PINECONE
+from torch.jit.frontend import pretty_node_names
 
 from app.schemas import Article
 from app.crud import (
@@ -23,6 +24,7 @@ import time
 import aiofiles
 from langchain.schema.runnable import RunnablePassthrough, RunnableParallel
 from dotenv import load_dotenv, find_dotenv
+import json
 
 load_dotenv(find_dotenv())
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -255,7 +257,50 @@ async def list_indexes():
             "available_indexes": list(pc.list_indexes().names())
         }
 
+# New endpoint to perform similarity search across all indexes
+@app.get("/query-similarity/")
+async def query_similarity():
+    try:
+        print("Query Vector")
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+        index_name = 'ai-article-manager'
 
+        # check if index already exists (it shouldn't if this is first time)
+        if index_name not in pc.list_indexes().names():
+            pc.create_index(
+                name=index_name,
+                dimension=embeddings.dimension,
+                metric="cosine",
+                spec=spec
+            )
+
+            # wait for index to be initialized
+            while not pc.describe_index(index_name).status['ready']:
+                time.sleep(1)
+
+        # connect to index
+        index = pc.Index(index_name)
+        time.sleep(1)
+
+        # view and retrieve index stats
+        index_stats = index.describe_index_stats()
+
+        # Convert index_stats to a JSON-compatible format if necessary
+        index_stats_json = json.loads(json.dumps(index_stats, default=str))
+
+        # returning index stats as JSON response
+        return {
+            "status": "success",
+            "index_name": index_name,
+            "index_details": index_stats_json
+        }
+
+    except Exception as e:
+        print(f"Detailed error: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
 @app.post("/articles/{id}/summarize")
 async def summarize_article(id: str):
     try:

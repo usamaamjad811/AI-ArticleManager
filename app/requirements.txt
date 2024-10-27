@@ -18,6 +18,7 @@ motor
 pydantic
 pinecone
 aiofiles
+python-multipart
 
 
 
