@@ -194,7 +194,6 @@ async def list_indexes():
         }
 
 
-# Define a Pydantic model for the request body
 class QueryRequest(BaseModel):
     question: str
 
@@ -202,7 +201,6 @@ class QueryRequest(BaseModel):
 @app.post("/ai-article-search/")
 async def query_similarity(query_request: QueryRequest):
     try:
-        # Extract the question from the request body
         question = query_request.question
         print("Processing question:", question)
 
@@ -210,7 +208,6 @@ async def query_similarity(query_request: QueryRequest):
         index_name = 'ai-article-manager'
         namespace = "wondervector5000"
 
-        # Check if index already exists, create if not
         if index_name not in pc.list_indexes().names():
             pc.create_index(
                 name=index_name,
@@ -219,15 +216,12 @@ async def query_similarity(query_request: QueryRequest):
                 spec=spec
             )
 
-            # Wait for index to be initialized
             while not pc.describe_index(index_name).status['ready']:
                 time.sleep(1)
 
-        # Connect to the existing index
         index = pc.Index(index_name)
         time.sleep(1)
 
-        # Load the existing embeddings directly from Pinecone
         docsearch = PineconeVectorStore(
             index_name=index_name,
             embedding=embeddings,
@@ -244,7 +238,6 @@ async def query_similarity(query_request: QueryRequest):
         prompt = ChatPromptTemplate.from_template(template)
         llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
-        # Define the chain with context and question retrieval
         chain = (
                 RunnableParallel({"context": retriever,
                                   "question": RunnablePassthrough()})
@@ -255,7 +248,6 @@ async def query_similarity(query_request: QueryRequest):
 
         def response_stream():
             try:
-                # Here we simulate streaming the response in chunks
                 response = chain.invoke(question)
                 for i in range(0, len(response), 50):  # Break response into chunks of 50 chars
                     yield response[i:i + 50]
@@ -275,16 +267,13 @@ async def query_similarity(query_request: QueryRequest):
 @app.post("/articles/{id}/summarize")
 async def summarize_article(id: str):
     try:
-        # Get the article content
         article = await get_article_by_id(id)
         # print("Article",article)
         if article is None:
             raise HTTPException(status_code=404, detail="Article not found")
 
-        # Initialize ChatOpenAI
         llm = ChatOpenAI(model="gpt-4o-2024-08-06", temperature=0)
 
-        # Create the summarization prompt
         template = """
         Always start your reply with a greeting and end with a closing.
         Please provide a detail summary of the following article. 
@@ -299,14 +288,12 @@ async def summarize_article(id: str):
 
         prompt = ChatPromptTemplate.from_template(template)
 
-        # Create the chain
         chain = (
                 prompt
                 | llm
                 | StrOutputParser()
         )
 
-        # Generate summary
         summary = chain.invoke({"content": article["content"]})
         print("Summary", summary)
 
