@@ -264,6 +264,7 @@ async def query_similarity():
         print("Query Vector")
         embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
         index_name = 'ai-article-manager'
+        namespace = "wondervector5000"
 
         # check if index already exists (it shouldn't if this is first time)
         if index_name not in pc.list_indexes().names():
@@ -284,6 +285,34 @@ async def query_similarity():
 
         # view and retrieve index stats
         index_stats = index.describe_index_stats()
+        # Load the existing embeddings directly from Pinecone
+        docsearch = PineconeVectorStore(
+            index_name=index_name,
+            embedding=embeddings,
+            namespace=namespace
+        )
+        retriever = docsearch.as_retriever(search_kwargs={"k": 5})
+
+        template = """
+        You are an AI Article Manager. You have been asked to provide the most relevant article based on the user's question and the given context.
+        Remember: Your goal is to provide the most accurate and relevant answer based on the user's question and the given context. If you cannot find a suitable match, it's better to admit that than to provide incorrect information.
+        Question: {question}
+        Context: {context}
+        """
+        prompt = ChatPromptTemplate.from_template(template)
+        llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        chain = (
+                RunnableParallel({"context": retriever,
+                                  "question": RunnablePassthrough()})
+                | prompt
+                | llm
+                | StrOutputParser()
+        )
+        Question = "What is the best way to manage articles?"
+        response = chain.invoke(Question)
+        print(response)
+
+        time.sleep(5)
 
         # Convert index_stats to a JSON-compatible format if necessary
         index_stats_json = json.loads(json.dumps(index_stats, default=str))
